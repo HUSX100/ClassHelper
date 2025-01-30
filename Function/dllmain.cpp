@@ -21,15 +21,23 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 // 检查HRESULT是否成功
 #define CHECK_HR(hr) if (FAILED(hr)) { wstring errMsg = L"Error: " + to_wstring(hr); MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR); return hr; }
 
-// 播放音频文件
-HRESULT PlayAudioFileWithVolume(const wstring& filePath, float volume) {
-    // 检查音频文件是否存在
+HRESULT CheckPath(const wstring& filePath) {
     ifstream file(filePath);
     if (!file.good()) {
         wstring errMsg = L"File not found: " + filePath;
         MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR);
         return E_FAIL;
     }
+    else return S_OK;
+}
+
+// 播放音频文件
+HRESULT PlayAudioFileWithVolume(const wstring& filePath, float volume) {
+    // 检查音频文件是否存在
+	if (CheckPath(filePath) != S_OK) 
+    {
+		return E_FAIL;
+	}
 
     // 检查音量范围是否在合理范围内 (0.0 到 1.0)
     if (volume < 0.0f || volume > 1.0f) {
