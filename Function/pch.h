@@ -9,6 +9,15 @@
 
 // 添加要在此处预编译的标头
 #include "framework.h"
+#include <audioclient.h>
+#include <mmdeviceapi.h>
+#include <string>
+#include <gdiplus.h>
+#include <gdiplusgraphics.h>
+#include <thread>
+#include <chrono>
+#include <fstream>
+#include <tlhelp32.h>
 #endif //PCH_H
 
 #ifdef EXPORT_DLL

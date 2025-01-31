@@ -1,9 +1,8 @@
 ﻿#include "pch.h"
-#include <string>
-#include <Audioclient.h>
-#include <Mmdeviceapi.h>
-#include <fstream>
-#include <avrt.h>
+
+#pragma comment(lib, "gdiplus.lib")
+
+using namespace Gdiplus;
 using namespace std;
 
 // DllMain
@@ -21,6 +20,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 // 检查HRESULT是否成功
 #define CHECK_HR(hr) if (FAILED(hr)) { wstring errMsg = L"Error: " + to_wstring(hr); MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR); return hr; }
 
+// 检查文件路径是否存在
 HRESULT CheckPath(const wstring& filePath) {
     ifstream file(filePath);
     if (!file.good()) {
@@ -30,6 +30,7 @@ HRESULT CheckPath(const wstring& filePath) {
     }
     else return S_OK;
 }
+
 
 // 播放音频文件
 HRESULT PlayAudioFileWithVolume(const wstring& filePath, float volume) {
@@ -142,11 +143,90 @@ HRESULT PlayAudioFileWithVolume(const wstring& filePath, float volume) {
     return S_OK;
 }
 
+// 显示图片函数
+//Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+//ULONG_PTR gdiplusToken;
+//GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+//Gdiplus::GdiplusShutdown(gdiplusToken);
+HRESULT ShowImageWithParameter(const wstring& imagePath, int width, int height, int duration) {
+    
+
+    if (CheckPath(imagePath) != S_OK) {
+        return E_FAIL;
+    }
+
+    HINSTANCE hInstance = GetModuleHandle(NULL);
+    HWND hwnd = CreateWindowEx(0, L"STATIC", NULL, WS_POPUP | WS_VISIBLE,
+        (GetSystemMetrics(SM_CXSCREEN) - width) / 2,
+        (GetSystemMetrics(SM_CYSCREEN) - height) / 2,
+        width, height, NULL, NULL, hInstance, NULL);
+
+    if (!hwnd) {
+        wstring errMsg = L"Failed to create window";
+        MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR);
+        return E_FAIL;
+    }
+
+    HDC hdc = GetDC(hwnd);
+    if (!hdc) {
+        wstring errMsg = L"Failed to get device context";
+        MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR);
+        DestroyWindow(hwnd);
+        return E_FAIL;
+    }
+
+    // 这里使用智能指针管理Image对象
+    unique_ptr<Image> pImage = nullptr;
+    try {
+        pImage = make_unique<Image>(imagePath.c_str());
+        Status status = pImage->GetLastStatus();
+        if (status != Ok) {
+            wstring errMsg = L"Failed to load image: " + imagePath + L" Status: " + to_wstring(status);
+            MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR);
+            throw runtime_error("Image load failed");
+        }
+    }
+    catch (const exception& e) {
+        MessageBox(NULL, L"Failed to create image", L"Error", MB_ICONERROR);
+        ReleaseDC(hwnd, hdc);
+        DestroyWindow(hwnd);
+        return E_FAIL;
+    }
+
+    Gdiplus::Graphics graphics(hdc);  // 使用GDI+ Graphics对象
+
+    // 等待指定时间之前不要销毁HDC或Graphics对象
+    graphics.DrawImage(pImage.get(), 0, 0, width, height);
+
+    // 等待指定时间
+    this_thread::sleep_for(chrono::seconds(duration));
+
+    // 释放资源
+    ReleaseDC(hwnd, hdc);   // 释放HDC
+    DestroyWindow(hwnd);    // 销毁窗口
+    return S_OK;
+}
+
+
+
+
 //EXPORT HRESULT PlayAudioFileWithVolume
 EXPORT_DLL int PlaySound(const float volume, const wstring filePath) {
     HRESULT hr = PlayAudioFileWithVolume(filePath, volume);
     if (FAILED(hr)) {
         wstring errMsg = L"Playback failed!";
+        MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR);
+        return -1;
+    }
+
+    return 0;
+}
+
+//EXPORT HRESULT ShowImageWithParameter
+EXPORT_DLL int ShowImage(const wstring& imagePath, int width, int height, int duration) {
+    HRESULT hr = ShowImageWithParameter(imagePath,width,height,duration);
+    if (FAILED(hr)) {
+        wstring errMsg = L"ShowImage failed!";
         MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR);
         return -1;
     }
