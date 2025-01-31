@@ -18,6 +18,17 @@
 #include <chrono>
 #include <fstream>
 #include <tlhelp32.h>
+#include <sstream>
+#include <iomanip>
+#include <avrt.h>
+#include <comdef.h>
+#include <iostream>
+#include <vector>
+#include <endpointvolume.h>
+#include <mmsystem.h>
+#include <tchar.h>
+#include <atomic>
+#include <windows.h>
 #endif //PCH_H
 
 #ifdef EXPORT_DLL
