@@ -31,7 +31,6 @@ HRESULT CheckPath(const wstring& filePath) {
     else return S_OK;
 }
 
-
 // 播放音频文件
 HRESULT PlayAudioFileWithVolume(const wstring& filePath, float volume) {
     // 检查音频文件是否存在
@@ -207,8 +206,74 @@ HRESULT ShowImageWithParameter(const wstring& imagePath, int width, int height, 
     return S_OK;
 }
 
+//终止进程函数
+HRESULT TerminateProcessByName(const wstring& processName) {
+    // 获取系统进程快照
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnapshot == INVALID_HANDLE_VALUE) {
+        MessageBox(NULL, L"Unable to create process snapshot", L"Error", MB_ICONERROR);
+        return E_FAIL;
+    }
 
+    PROCESSENTRY32 processEntry;
+    processEntry.dwSize = sizeof(PROCESSENTRY32);
 
+    // 获取第一个进程的信息
+    if (!Process32First(hSnapshot, &processEntry)) {
+        CloseHandle(hSnapshot);
+        MessageBox(NULL, L"Unable to retrieve process information", L"Error", MB_ICONERROR);
+        return E_FAIL;
+    }
+
+    do {
+        // 检查进程名是否匹配
+        if (processName == processEntry.szExeFile) {
+            // 找到目标进程，尝试终止它
+            HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, processEntry.th32ProcessID);
+            if (hProcess == NULL) {
+                CloseHandle(hSnapshot);
+                MessageBox(NULL, L"Unable to open the process", L"Error", MB_ICONERROR);
+                return E_FAIL;
+            }
+
+            if (!TerminateProcess(hProcess, 0)) {
+                CloseHandle(hProcess);
+                CloseHandle(hSnapshot);
+                MessageBox(NULL, L"Unable to terminate the process", L"Error", MB_ICONERROR);
+                return E_FAIL;
+            }
+
+            CloseHandle(hProcess);
+            CloseHandle(hSnapshot);
+            //MessageBox(NULL, L"Process terminated successfully", L"Success", MB_ICONINFORMATION);
+            return S_OK;
+        }
+    } while (Process32Next(hSnapshot, &processEntry));
+
+    CloseHandle(hSnapshot);
+    MessageBox(NULL, L"Process not found", L"Error", MB_ICONERROR);
+    return E_FAIL;
+}
+
+//关机函数
+HRESULT ShutdownComputerImmediately() {
+
+    // 先广播关机请求
+    if (!SendMessageTimeout(HWND_BROADCAST, WM_QUERYENDSESSION, 0, 0, SMTO_ABORTIFHUNG, 10000, NULL)) {
+        MessageBox(NULL, L"Failed to broadcast shutdown request", L"Error", MB_ICONERROR);
+        return E_FAIL;
+    }
+
+    // 发出关机请求
+    if (!ExitWindowsEx(EWX_SHUTDOWN | EWX_FORCE, SHTDN_REASON_MAJOR_OTHER)) {
+        MessageBox(NULL, L"Unable to shutdown the computer", L"Error", MB_ICONERROR);
+        return E_FAIL;
+    }
+
+    // 返回成功
+    MessageBox(NULL, L"Shutdown initiated", L"Success", MB_ICONINFORMATION);
+    return S_OK;
+}
 
 //EXPORT HRESULT PlayAudioFileWithVolume
 EXPORT_DLL int PlaySound(const float volume, const wstring filePath) {
@@ -232,4 +297,26 @@ EXPORT_DLL int ShowImage(const wstring& imagePath, int width, int height, int du
     }
 
     return 0;
+}
+
+//EXPORT HRESULT TerminateProcessByName
+EXPORT_DLL int TerminateSingleProcess(const wstring& processName) {
+	HRESULT hr = TerminateProcessByName(processName);
+	if (FAILED(hr)) {
+		wstring errMsg = L"TerminateProcess failed!";
+		MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR);
+		return -1;
+	}
+	return 0;
+}
+
+//EXPORT HRESULT ShutdownComputerImmediately
+EXPORT_DLL int ShutdownComputer() {
+	HRESULT hr = ShutdownComputerImmediately();
+	if (FAILED(hr)) {
+		wstring errMsg = L"ShutdownComputer failed!";
+		MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR);
+		return -1;
+	}
+	return 0;
 }
