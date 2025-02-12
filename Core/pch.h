@@ -29,6 +29,7 @@
 #include <tchar.h>
 #include <atomic>
 #include <windows.h>
+#include <random>
 #endif //PCH_H
 
 #ifdef EXPORT_DLL

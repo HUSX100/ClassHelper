@@ -251,15 +251,58 @@ HRESULT ShutdownComputerImmediately() {
     return S_OK;
 }
 
+//点名器函数
+wstring GetRandomStudent()
+{
+    wstring filename = L".\\ClassHelper\\Resource\\Namelist.txt"; // 直接定义文件名
+	HRESULT hr = CheckPath(filename);
+    if ((((HRESULT)(hr)) < 0)) {
+        std::wstringstream ss; ss << L"Error: 0x" << std::hex << std::setw(8) << std::setfill(L'0') << hr; std::wstring errMsg = ss.str(); MessageBoxW(0, errMsg.c_str(), L"Error", 0x00000010L); return L"";
+    };
+    ifstream file(filename.c_str());
+    wstring result;
+
+    if (!file.is_open()) {
+        MessageBox(NULL, L"Falied to open the file!", L"ERROR", MB_OK | MB_ICONERROR);
+        return L"";
+    }
+
+    string line;
+    // 读取学生人数
+    getline(file, line);
+    int studentNum = stoi(line.substr(line.find('=') + 1));
+
+    // 读取学生姓名
+    vector<wstring> names;
+    for (int i = 0; i < studentNum; ++i) {
+        getline(file, line);
+        // 将UTF-8编码的string转换为wstring
+        int len;
+        int slength = (int)line.length() + 1;
+        len = MultiByteToWideChar(CP_UTF8, 0, line.c_str(), slength, 0, 0);
+        wstring r(len, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, line.c_str(), slength, &r[0], len);
+        names.push_back(r);
+    }
+
+    file.close();
+
+    // 初始化随机数生成器
+    random_device rd;
+    mt19937 generator(rd());
+    uniform_int_distribution<int> distribution(0, studentNum - 1);
+
+    // 随机抽取一个学生
+    int randomIndex = distribution(generator);
+    result = names[randomIndex];
+
+    return result;
+}
+
 //EXPORT HRESULT PlayAudioFileWithVolume
 EXPORT_DLL int PlayAudio(const float volume, const wstring filePath) {
     HRESULT hr = PlayAudioFileWithVolume(filePath, volume);
-    if (FAILED(hr)) {
-        wstring errMsg = L"Playback failed!";
-        MessageBox(NULL, errMsg.c_str(), L"Error", MB_ICONERROR);
-        return -1;
-    }
-
+    CHECK_HR(hr);
     return 0;
 }
 
@@ -295,4 +338,10 @@ EXPORT_DLL int ShutdownComputer() {
 		return -1;
 	}
 	return 0;
+}
+
+//EXPORT wstring GetRandomStudent
+EXPORT_DLL BSTR GetRandomStudentName() {
+                wstring name = GetRandomStudent();
+                return SysAllocString(name.c_str());
 }

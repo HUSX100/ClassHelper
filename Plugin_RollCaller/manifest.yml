@@ -1,0 +1,7 @@
+id: ClassHelper.RollCaller
+name: 点名器服务
+description: 用于为点名器提供提醒接口
+entranceAssembly: "Plugin_RollCaller.dll"
+url: https://github.com/HUSX100/ClassHelper/Plugin_RollCaller
+author: HUSX100
+version: 1.0.0.0
